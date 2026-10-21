@@ -1,0 +1,509 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>BLOSUM Adım Adım</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Düzen: dört kısa sahne; solda sahnenin çizimi (SVG), sağda açıklama; altta ortak oynatma kontrolleri */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --ink:#16202B; --muted:#586674; --line:#D3DBE2; --cell:#F4F7F9;
+  --accent:#2251C9; --accent-soft:#DCE5FB;
+  --pos:#C2410C; --pos-soft:#FCE6D8; --neg:#2B6CB0; --neg-soft:#DDEAF7; --on-pos:#FFFFFF;
+  --c1:#2251C9; --c2:#0E8A6B; --c3:#7A3FD1; --c4:#C85F05;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --k:1;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E141A; --surface:#161F28; --ink:#E5ECF2; --muted:#93A2B0; --line:#2B3744; --cell:#1A2430;
+  --accent:#7DA3FF; --accent-soft:#1D2D52;
+  --pos:#FF8A4C; --pos-soft:#3D2416; --neg:#6FA8E8; --neg-soft:#16283D; --on-pos:#1A0F08;
+  --c1:#7DA3FF; --c2:#3DCB9E; --c3:#B58EFF; --c4:#FF9E4F;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#161F28; --ink:#E5ECF2; --muted:#93A2B0; --line:#2B3744; --cell:#1A2430;
+  --accent:#7DA3FF; --accent-soft:#1D2D52;
+  --pos:#FF8A4C; --pos-soft:#3D2416; --neg:#6FA8E8; --neg-soft:#16283D; --on-pos:#1A0F08;
+  --c1:#7DA3FF; --c2:#3DCB9E; --c3:#B58EFF; --c4:#FF9E4F;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-direction:column;gap:12px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3.4vw,34px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.scenes{display:flex;gap:6px;flex-wrap:wrap}
+.scenes button{font-size:13px;font-weight:500;padding:6px 12px;border-radius:999px;min-height:34px;background:var(--surface)}
+.scenes button span{font-family:var(--f-mono);margin-right:6px;color:var(--muted)}
+.scenes button[aria-current="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.scenes button[aria-current="true"] span{color:inherit}
+
+main{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.stage svg{display:block;width:100%;height:auto;max-height:74vh}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 22px;min-height:420px}
+.eyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 4px}
+.panel h2{font-family:var(--f-display);font-weight:600;font-size:24px;margin:0 0 8px;line-height:1.2;text-wrap:balance}
+.panel p{margin:8px 0;max-width:60ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.box{padding:10px 12px;border-radius:9px;background:var(--accent-soft);margin:10px 0}
+.box b{font-family:var(--f-mono)}
+.note{color:var(--muted);font-size:13.5px}
+.later,.box,.note,.panel li{animation:appear calc(.35s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.panel ul{margin:8px 0;padding-left:20px}
+.panel li{margin:4px 0}
+.formula{font-family:var(--f-mono);font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--cell);display:inline-block}
+
+.controls{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;z-index:5}
+button{font:inherit;font-size:14px;font-weight:600;color:var(--ink);background:var(--cell);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;min-height:38px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min-width:118px}
+.speed{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.speed button{border:0;border-radius:0;background:transparent;font-family:var(--f-mono);padding:8px 10px;min-height:36px}
+.speed button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.prog{flex:1 1 220px;display:flex;align-items:center;gap:10px;min-width:0}
+.prog input{flex:1;min-width:0;accent-color:var(--accent)}
+.prog .cnt{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+.keys{font-size:12px;color:var(--muted);width:100%}
+@media (max-width:560px){.keys,.speed{display:none}.controls{gap:6px}.controls button{padding:7px 9px;font-size:13px}button.primary{min-width:96px}}
+
+/* SVG */
+svg text{font-family:var(--f-body);fill:var(--ink)}
+svg .m{font-family:var(--f-mono)}
+svg .mut{fill:var(--muted)}
+svg .acc{fill:var(--accent)}
+svg .posT{fill:var(--pos)} svg .negT{fill:var(--neg)}
+.ln{stroke:var(--line);fill:none}
+.ink{stroke:var(--ink);fill:none}
+.card{fill:var(--cell);stroke:var(--line)}
+.aa{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+.ap{animation:appear calc(.35s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.pop{transform-box:fill-box;transform-origin:center;animation:pop calc(.45s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.grow{transform-box:fill-box;transform-origin:var(--or,left) center;animation:grow calc(.6s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw calc(.6s*var(--k)) forwards;animation-delay:calc(var(--dl,0s)*var(--k))}
+.slide{animation:slide calc(.9s*var(--k)) cubic-bezier(.3,.7,.2,1) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.dimmed{opacity:.18;transition:opacity calc(.5s*var(--k))}
+@keyframes pop{from{opacity:0;transform:scale(.35)}70%{transform:scale(1.12)}to{opacity:1;transform:scale(1)}}
+@keyframes appear{from{opacity:0}to{opacity:1}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes slide{from{transform:translateX(var(--fx,0px))}to{transform:translateX(0)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>BLOSUM, adım adım</h1>
+      <p class="sub">Protein hizalamasında yer değiştirme skorları nereden gelir, ne anlama gelir, nasıl kullanılır? Dört kısa sahne.</p>
+    </div>
+    <nav class="scenes" id="scenes" aria-label="Sahneler">
+      <button data-sc="0"><span>1</span>Skor = kaç kat sık?</button>
+      <button data-sc="1"><span>2</span>Bir sütundan sayım</button>
+      <button data-sc="2"><span>3</span>BLOSUM62 haritası</button>
+      <button data-sc="3"><span>4</span>Hizalamayı skorlamak</button>
+    </nav>
+  </header>
+  <main>
+    <div class="stage"><svg id="sv" viewBox="0 0 600 520" role="img" aria-label="BLOSUM animasyon sahnesi"></svg></div>
+    <section class="panel" id="panel" aria-live="polite"></section>
+  </main>
+  <div class="controls">
+    <button id="bStart" title="Bu sahnenin başına dön">⏮ Sahne başı</button>
+    <button id="bPrev">◀ Geri</button>
+    <button id="bPlay" class="primary">▶ Oynat</button>
+    <button id="bNext">İleri ▶</button>
+    <div class="speed" role="group" aria-label="Hız">
+      <button data-s="0.5" aria-pressed="false">0.5×</button>
+      <button data-s="1" aria-pressed="true">1×</button>
+      <button data-s="2" aria-pressed="false">2×</button>
+    </div>
+    <div class="prog"><input type="range" id="slider" min="0" value="0" aria-label="Adım seç"><span class="cnt" id="cnt"></span></div>
+    <div class="keys">Klavye: Boşluk = oynat / duraklat · ← → = adım adım ilerle · Üstteki sahne düğmeleriyle istediğiniz sahneye atlayın</div>
+  </div>
+</div>
+
+<script>
+(function(){
+const sv=document.getElementById("sv"), panel=document.getElementById("panel");
+const fmt=v=>v<0?"−"+(-v):String(v);
+const fx=(v,d=2)=>{const s=Math.abs(v).toFixed(d); return (v<0?"−":"")+s;};
+const T=(x,y,t,cls="",extra="")=>`<text x="${x}" y="${y}" class="${cls}" ${extra}>${t}</text>`;
+
+/* ---------- SAHNE 1: log-odds cetveli ---------- */
+const PAIRS=[
+  {a:"I",b:"V",na:"İzolösin",nb:"Valin",r:2.83,l:1.5,s:3,why:"İkisi de hidrofobik ve dallı yan zincirli; biri diğerinin yerine kolayca geçer."},
+  {a:"I",b:"L",na:"İzolösin",nb:"Lösin",r:2.0,l:1,s:2,why:"Boyut ve kimya olarak çok benzer; değişim proteini pek bozmaz."},
+  {a:"C",b:"C",na:"Sistein",nb:"Sistein",r:22.6,l:4.5,s:9,why:"Sistein nadir ve disülfit bağları kurduğu için güçlü biçimde korunur."},
+  {a:"W",b:"W",na:"Triptofan",nb:"Triptofan",r:45.3,l:5.5,s:11,why:"Triptofan en nadir amino asit (≈ %1.3). İki dizide aynı yerde görmek rastlantıyla çok zor."},
+  {a:"W",b:"G",na:"Triptofan",nb:"Glisin",r:0.5,l:-1,s:-2,why:"En büyük yan zincir ile en küçüğü. Bu değişim homologlarda rastgeleden bile seyrek."},
+];
+const RX0=60, RW=480, RY=300; const rx=l=>RX0+(l+2)*(RW/8);
+function rulerSVG(showMarks, dl){
+  let h=`<g class="ap" style="--dl:${dl}s">`;
+  h+=`<rect x="${RX0}" y="${RY-14}" width="${rx(0)-RX0}" height="28" rx="6" fill="var(--neg-soft)"/>`;
+  h+=`<rect x="${rx(0)}" y="${RY-14}" width="${RX0+RW-rx(0)}" height="28" rx="6" fill="var(--pos-soft)"/>`;
+  h+=`<line class="ink" x1="${RX0}" y1="${RY}" x2="${RX0+RW}" y2="${RY}" stroke-width="2"/>`;
+  const kat=["¼","½","1","2","4","8","16","32","64"];
+  for(let n=-2;n<=6;n++){ const x=rx(n);
+    h+=`<line class="ink" x1="${x}" y1="${RY-8}" x2="${x}" y2="${RY+8}" stroke-width="${n===0?3:1.5}"/>`;
+    h+=T(x,RY-24,kat[n+2]+"×","m","text-anchor=\"middle\" font-size=\"14\" font-weight=\"600\"");
+    h+=T(x,RY+30,fmt(2*n),"m "+(n>0?"posT":n<0?"negT":""),"text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\"");
+  }
+  h+=T(RX0,RY-112,"Homologlarda rastlantıya göre kaç kat sık?  (q / p·p)","mut","font-size=\"12.5\"");
+  h+=T(RX0,RY+56,"BLOSUM skoru = 2 × log₂(oran)","mut","font-size=\"12.5\"");
+  h+=T(rx(-1),RY+78,"rastgeleden seyrek → negatif","negT","text-anchor=\"middle\" font-size=\"12\"");
+  h+=T(rx(3),RY+78,"rastgeleden sık → pozitif","posT","text-anchor=\"middle\" font-size=\"12\"");
+  h+=`</g>`;
+  if(showMarks){ for(let n=-2;n<6;n++){ const x1=rx(n),x2=rx(n+1),d=dl+.5+(n+2)*.12;
+    h+=`<g class="ap" style="--dl:${d}s"><path class="ln" d="M${x1+6},${RY-66} Q${(x1+x2)/2},${RY-84} ${x2-6},${RY-66}" stroke="var(--accent)" stroke-width="1.5"/>${n===0?T((x1+x2)/2,RY-92,"×2 → +2","acc m","text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\""):""}</g>`; } }
+  return h;
+}
+function s1Pair(idx){
+  const p=PAIRS[idx];
+  let h=rulerSVG(false,0);
+  // daha önce yerleştirilenler
+  for(let q=0;q<idx;q++){ const o=PAIRS[q], x=rx(o.l);
+    h+=`<g opacity=".55"><line x1="${x}" y1="${RY-14}" x2="${x}" y2="${RY+14}" stroke="var(--muted)" stroke-width="3"/>${T(x,RY+108+(q%2)*16,o.a+"–"+o.b,"m mut","text-anchor=\"middle\" font-size=\"12\" font-weight=\"600\"")}</g>`; }
+  // çift kartı
+  h+=`<g class="ap" style="--dl:0s"><circle class="aa" cx="240" cy="96" r="38"/><circle class="aa" cx="360" cy="96" r="38"/>`;
+  h+=T(240,106,p.a,"m","text-anchor=\"middle\" font-size=\"32\" font-weight=\"600\"")+T(360,106,p.b,"m","text-anchor=\"middle\" font-size=\"32\" font-weight=\"600\"");
+  h+=`<line class="ink" x1="282" y1="96" x2="318" y2="96" stroke-width="2"/>`;
+  h+=T(240,154,p.na,"mut","text-anchor=\"middle\" font-size=\"13\"")+T(360,154,p.nb,"mut","text-anchor=\"middle\" font-size=\"13\"")+`</g>`;
+  // işaretçi
+  const x=rx(p.l), from=rx(0)-x, col=p.s>0?"var(--pos)":"var(--neg)";
+  h+=`<g class="slide" style="--dl:.6s;--fx:${from}px"><line x1="${x}" y1="${RY-40}" x2="${x}" y2="${RY+16}" stroke="${col}" stroke-width="4"/><path d="M${x-9},${RY-52} L${x+9},${RY-52} L${x},${RY-38} z" fill="${col}"/>${T(x,RY-58,p.r.toFixed(p.r<10?2:1)+"×","m","text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\" fill=\""+col+"\"")}</g>`;
+  // hesap zinciri
+  const bx=[60,235,410], lab=[`q/(p·p) ≈ ${p.r.toFixed(2)}`,`log₂ = ${fx(p.l,1)}`,`× 2 = ${fmt(p.s)}`];
+  bx.forEach((X,q)=>{ h+=`<g class="ap" style="--dl:${1.6+q*.6}s"><rect class="card" x="${X}" y="440" width="${q===2?130:150}" height="44" rx="9" ${q===2?`style="fill:${p.s>0?"var(--pos-soft)":"var(--neg-soft)"};stroke:${col};stroke-width:2"`:""}/>${T(X+(q===2?65:75),468,lab[q],"m","text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\"")}</g>`;
+    if(q<2) h+=`<g class="ap" style="--dl:${1.9+q*.6}s">${T(X+(q===2?130:150)+12,468,"→","mut","font-size=\"18\"")}</g>`; });
+  return h;
+}
+const S1=[
+  {dur:9,svg:()=>{
+    let h="";
+    h+=`<g class="ap" style="--dl:.1s"><rect class="card" x="40" y="70" width="230" height="200" rx="14"/>${T(155,100,"Homolog proteinler","","text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\"")}`;
+    const rows=["K I E A L","R V E A L","K I D S L","R V E A M"];
+    rows.forEach((r,q)=>{ h+=T(155,138+q*28,r,"m","text-anchor=\"middle\" font-size=\"19\" font-weight=\"600\" letter-spacing=\"2\""); });
+    h+=`<rect x="117" y="118" width="26" height="114" rx="6" fill="none" stroke="var(--pos)" stroke-width="2.5"/>`;
+    h+=T(155,258,"I ile V aynı sütunda sık","posT","text-anchor=\"middle\" font-size=\"12.5\"")+`</g>`;
+    h+=`<g class="ap" style="--dl:1.2s"><rect class="card" x="330" y="70" width="230" height="200" rx="14"/>${T(445,100,"Rastgele iki harf","","text-anchor=\"middle\" font-size=\"15\" font-weight=\"600\"")}`;
+    const rnd=["G","W","P","I","K","A","V","S","E","L","N","T"];
+    rnd.forEach((c,q)=>{ h+=T(372+(q%4)*48,142+Math.floor(q/4)*38,c,"m mut","text-anchor=\"middle\" font-size=\"20\" font-weight=\"600\""); });
+    h+=T(445,258,"Beklenen: p(I) × p(V)","negT","text-anchor=\"middle\" font-size=\"12.5\"")+`</g>`;
+    h+=`<g class="ap" style="--dl:2.4s">${T(300,330,"Oran = gözlenen / beklenen = q / (p·p)","m","text-anchor=\"middle\" font-size=\"17\" font-weight=\"600\"")}</g>`;
+    h+=`<g class="ap" style="--dl:3.4s">${T(300,380,"Skor = 2 × log₂(oran)","m acc","text-anchor=\"middle\" font-size=\"22\" font-weight=\"700\"")}${T(300,408,"(BLOSUM62: yarım bit birimi, tamsayıya yuvarlanır)","mut","text-anchor=\"middle\" font-size=\"12.5\"")}</g>`;
+    return h;},
+   panel:()=>`<p class="eyebrow">Sahne 1 · Fikir</p><h2>Bir BLOSUM skoru tek bir soruya cevaptır</h2>
+    <p>“Akraba (homolog) proteinleri hizaladığımızda <b>a</b> ile <b>b</b> harfleri aynı sütunda, rastlantıya göre <b>kaç kat sık</b> görünüyor?”</p>
+    <p class="later" style="--dl:1.2s">Rastlantı beklentisi, iki harfin kendi sıklıklarının çarpımıdır: p(a)·p(b).</p>
+    <div class="box" style="--dl:2.4s">Gözlenen sıklık <b>q(a,b)</b>, beklenenden büyükse skor pozitif, küçükse negatif olur.</div>
+    <p class="note" style="--dl:3.4s">Soldaki dört dizi yalnızca fikri göstermek için seçilmiş küçük bir örnektir.</p>`},
+  {dur:7,svg:()=>rulerSVG(true,0),
+   panel:()=>`<p class="eyebrow">Sahne 1 · Cetvel</p><h2>Her “2 kat” = +2 puan</h2>
+    <p>Logaritma, çarpmayı toplamaya çevirir. Cetvelde her çentik bir önceki çentiğin <b>iki katı</b> sıklığı gösterir ve skoru <b>2 puan</b> artırır.</p>
+    <p class="later" style="--dl:1s"><b>1×</b> (rastgele ile aynı) → skor <b>0</b>. Yarı sıklık (½×) → <b>−2</b>.</p>
+    <div class="box" style="--dl:1.8s">s = 2 · log₂( q / p·p )</div>
+    <p class="note" style="--dl:2.4s">Şimdi gerçek BLOSUM62 değerlerini bu cetvele yerleştirelim.</p>`},
+  ...PAIRS.map((p,i)=>({dur:7,svg:()=>s1Pair(i),
+   panel:()=>`<p class="eyebrow">Sahne 1 · Çift ${i+1} / ${PAIRS.length}</p><h2><span class="mono">${p.a}–${p.b}</span>: BLOSUM62 skoru <span class="mono" style="color:${p.s>0?"var(--pos)":"var(--neg)"}">${fmt(p.s)}</span></h2>
+    <p>${p.na} – ${p.nb}. ${p.why}</p>
+    <div class="box" style="--dl:1.6s">Homologlarda rastlantıya göre <b>${p.r.toFixed(2)} kat</b> ${p.r>=1?"sık":"(yani yarı sıklıkta)"} → log₂ = ${fx(p.l,1)} → × 2 = <b>${fmt(p.s)}</b></div>
+    <p class="note" style="--dl:2.6s">Ters yön: oran = 2^(s/2). Tamsayıya yuvarlama nedeniyle oranlar yaklaşıktır.</p>`})),
+  {dur:9,svg:()=>{ let h=rulerSVG(false,0);
+    PAIRS.forEach((o,q)=>{ const x=rx(o.l), col=o.s>0?"var(--pos)":"var(--neg)";
+      h+=`<g class="pop" style="--dl:${.2+q*.25}s"><line x1="${x}" y1="${RY-16}" x2="${x}" y2="${RY+16}" stroke="${col}" stroke-width="4"/>${T(x,RY+108+(q%2)*18,o.a+"–"+o.b+" ("+fmt(o.s)+")","m","text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"600\" fill=\""+col+"\"")}</g>`; });
+    h+=`<g class="ap" style="--dl:1.8s"><rect class="card" x="60" y="70" width="480" height="120" rx="12"/>`;
+    h+=T(80,104,"W–W","m posT","font-size=\"18\" font-weight=\"700\"")+T(140,104,"45.3×","m","font-size=\"18\"")+`<rect class="grow" x="210" y="90" width="300" height="18" rx="4" fill="var(--pos)" style="--dl:2.2s"/>`;
+    h+=T(80,150,"I–V","m posT","font-size=\"18\" font-weight=\"700\"")+T(140,150,"2.83×","m","font-size=\"18\"")+`<rect class="grow" x="210" y="136" width="${300*2.83/45.3}" height="18" rx="4" fill="var(--pos)" style="--dl:2.6s"/>`;
+    h+=T(300,180,"≈ 16 kat daha güçlü homoloji kanıtı","acc","text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\"")+`</g>`;
+    return h;},
+   panel:()=>`<p class="eyebrow">Sahne 1 · Özet</p><h2>Skorlar keyfî ağırlık değil, bilgi miktarıdır</h2>
+    <ul><li style="--dl:.3s">Benzer kimyalı değişimler (I–V, I–L) pozitif.</li>
+    <li style="--dl:.6s">Nadir ve korunmuş harflerin eşleşmesi (W–W, C–C) çok yüksek.</li>
+    <li style="--dl:.9s">Kimyası çok farklı değişimler (W–G) negatif.</li></ul>
+    <div class="box" style="--dl:1.8s">Bir W–W eşleşmesi, bir I–V değişiminden yaklaşık <b>16 kat</b> daha fazla “bu diziler akraba” kanıtı taşır.</div>
+    <p class="note" style="--dl:2.6s">DNA'daki +1/−1 puanlaması bu farkları göremez; proteinlerde matris kullanmamızın nedeni budur.</p>`},
+];
+
+/* ---------- SAHNE 2: tek sütundan sayım ---------- */
+const COL=["L","L","I","V"], CY=[120,195,270,345], CX=110;
+const PROWS=[{p:"L–L",n:1,q:1/6,e:.25,col:"var(--c1)"},{p:"L–I",n:2,q:2/6,e:.25,col:"var(--c2)"},{p:"L–V",n:2,q:2/6,e:.25,col:"var(--c3)"},{p:"I–V",n:1,q:1/6,e:.125,col:"var(--c4)"}];
+const PAIRLIST=[[0,1,0],[0,2,1],[0,3,2],[1,2,1],[1,3,2],[2,3,3]]; // (i,j,satır)
+function s2SVG(stage){
+  let h="";
+  // sütun
+  h+=T(CX,72,"Hizalama sütunu","","text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\"");
+  COL.forEach((c,q)=>{ const y=CY[q];
+    h+=T(CX-62,y+6,"Dizi "+(q+1),"mut","font-size=\"12\"");
+    h+=T(CX-30,y+7,"· ·","mut m","text-anchor=\"middle\" font-size=\"16\"")+T(CX+30+(stage>=1?110:0),y+7,stage>=1?"":"· ·","mut m","text-anchor=\"middle\" font-size=\"16\"");
+    h+=`<rect x="${CX-22}" y="${y-22}" width="44" height="44" rx="9" fill="var(--surface)" stroke="var(--ink)" stroke-width="2"/>`+T(CX,y+9,c,"m","text-anchor=\"middle\" font-size=\"24\" font-weight=\"600\"");
+  });
+  // çift yayları
+  if(stage>=1){ PAIRLIST.forEach(([a,b,r],q)=>{ const y1=CY[a],y2=CY[b],bend=24+(y2-y1)*.45;
+    const dl= stage===1? .4+q*.55 : 0;
+    h+=`<path class="${stage===1?"draw":""}" pathLength="1" d="M${CX+22},${y1} C${CX+22+bend},${y1} ${CX+22+bend},${y2} ${CX+22},${y2}" fill="none" stroke="${PROWS[r].col}" stroke-width="3" style="--dl:${dl}s"/>`; });
+  }
+  // tablo
+  const TX=[300,365,425,490,560], TY0=110, RH=44;
+  if(stage>=1){
+    h+=`<g>${["Çift","Sayı","q","e","log₂(q/e)"].map((t,q)=>T(TX[q],TY0-26,t,"mut","text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"600\"")).join("")}</g>`;
+    h+=`<line class="ln" x1="270" y1="${TY0-16}" x2="598" y2="${TY0-16}"/>`;
+    PROWS.forEach((r,q)=>{ const y=TY0+q*RH+12;
+      h+=T(TX[0],y,r.p,"m","text-anchor=\"middle\" font-size=\"16\" font-weight=\"600\" fill=\""+r.col+"\"");
+      // sayı: yay çizildikçe artsın
+      if(stage===1){ let cnt=0; PAIRLIST.forEach(([a,b,rr],k)=>{ if(rr===q){cnt++; h+=`<g class="pop" style="--dl:${.9+k*.55}s"><rect x="${TX[1]-16}" y="${y-18}" width="32" height="26" rx="6" fill="var(--surface)"/>${T(TX[1],y,cnt,"m","text-anchor=\"middle\" font-size=\"16\" font-weight=\"600\"")}</g>`;} }); }
+      else h+=T(TX[1],y,r.n,"m","text-anchor=\"middle\" font-size=\"16\" font-weight=\"600\"");
+      if(stage>=2) h+=`<g class="${stage===2?"ap":""}" style="--dl:${.3+q*.3}s">${T(TX[2],y,r.n+"/6","m","text-anchor=\"middle\" font-size=\"15\"")}</g>`;
+      if(stage>=4) h+=`<g class="${stage===4?"ap":""}" style="--dl:${.5+q*.4}s">${T(TX[3],y,r.e.toFixed(3).replace(/0+$/,"").replace(/\.$/,""),"m","text-anchor=\"middle\" font-size=\"15\"")}</g>`;
+      if(stage>=5){ const v=Math.log2(r.q/r.e); h+=`<g class="${stage===5?"ap":""}" style="--dl:${.3+q*.3}s">${T(TX[4],y,(v>0?"+":"")+fx(v),"m "+(v>0?"posT":"negT"),"text-anchor=\"middle\" font-size=\"15\" font-weight=\"700\"")}</g>`; }
+      h+=`<line class="ln" x1="270" y1="${y+14}" x2="598" y2="${y+14}"/>`;
+    });
+    h+=T(TX[1],TY0+4*RH+14,"6","m mut","text-anchor=\"middle\" font-size=\"13\"")+T(TX[0],TY0+4*RH+14,"toplam","mut","text-anchor=\"middle\" font-size=\"12\"");
+  }
+  // harf sıklıkları
+  if(stage>=3){
+    h+=`<g class="${stage===3?"ap":""}" style="--dl:.2s"><rect class="card" x="20" y="400" width="220" height="104" rx="10"/>${T(34,424,"Harf sıklıkları (4 harf)","mut","font-size=\"12\" font-weight=\"600\"")}`;
+    [["L","2/4 = 0.5",.5],["I","1/4 = 0.25",.25],["V","1/4 = 0.25",.25]].forEach(([a,t,v],q)=>{ const y=450+q*20;
+      h+=T(34,y,"p("+a+")","m","font-size=\"13\"")+`<rect class="${stage===3?"grow":""}" x="80" y="${y-11}" width="${v*120}" height="13" rx="3" fill="var(--accent)" style="--dl:${.5+q*.3}s"/>`+T(84+v*120+6,y,t,"m mut","font-size=\"12\""); });
+    h+=`</g>`;
+  }
+  // log çubukları
+  if(stage>=5){
+    const BX=430, SC=110;
+    h+=`<g class="${stage===5?"ap":""}" style="--dl:1.4s"><line class="ink" x1="${BX}" y1="330" x2="${BX}" y2="500" stroke-width="1.5"/>${T(BX,322,"0","m mut","text-anchor=\"middle\" font-size=\"11\"")}`;
+    PROWS.forEach((r,q)=>{ const v=Math.log2(r.q/r.e), y=345+q*38, w=Math.abs(v)*SC;
+      h+=T(290,y+15,r.p,"m","font-size=\"14\" font-weight=\"600\" fill=\""+r.col+"\"");
+      h+=`<rect class="${stage===5?"grow":""}" x="${v<0?BX-w:BX}" y="${y}" width="${w}" height="22" rx="4" fill="${v<0?"var(--neg)":"var(--pos)"}" style="--dl:${1.6+q*.3}s;--or:${v<0?"right":"left"}"/>`; });
+    h+=`</g>`;
+  }
+  return h;
+}
+const S2=[
+  {dur:7,svg:()=>s2SVG(0),panel:()=>`<p class="eyebrow">Sahne 2 · Sayım</p><h2>BLOSUM, gerçek hizalamalardaki çiftleri sayar</h2>
+   <p>Henikoff'lar (1992) boşluksuz, korunmuş protein bloklarını topladı ve her sütundaki harf çiftlerini saydı. Küçük bir örnekle aynı işi yapalım.</p>
+   <div class="box" style="--dl:1s">Bir sütunda 4 dizi var: <b>L, L, I, V</b></div>
+   <p class="note" style="--dl:1.8s">Ders notundaki örnek sütun (slayt 25).</p>`},
+  {dur:7,svg:()=>s2SVG(1),panel:()=>`<p class="eyebrow">Sahne 2 · Adım 1</p><h2>Tüm harf çiftlerini say</h2>
+   <p>4 diziden <span class="mono">C(4,2) = 6</span> çift çıkar. Her yay bir çifttir.</p>
+   <div class="box" style="--dl:3.8s">L–L × 1, L–I × 2, L–V × 2, I–V × 1 → toplam 6</div>`},
+  {dur:6,svg:()=>s2SVG(2),panel:()=>`<p class="eyebrow">Sahne 2 · Adım 2</p><h2>Gözlenen sıklık: <span class="mono">q</span></h2>
+   <p>Her çiftin sayısını toplam çift sayısına böl.</p>
+   <div class="box" style="--dl:1.2s">q(L,I) = 2/6 ≈ <b>0.333</b>, q(L,L) = 1/6 ≈ <b>0.167</b></div>`},
+  {dur:6,svg:()=>s2SVG(3),panel:()=>`<p class="eyebrow">Sahne 2 · Adım 3</p><h2>Her harfin kendi sıklığı: <span class="mono">p</span></h2>
+   <p>Sütundaki 4 harften 2'si L, 1'i I, 1'i V.</p>
+   <div class="box" style="--dl:1.4s">p(L) = <b>0.5</b>, p(I) = p(V) = <b>0.25</b></div>`},
+  {dur:8,svg:()=>s2SVG(4),panel:()=>`<p class="eyebrow">Sahne 2 · Adım 4</p><h2>Rastlantı beklentisi: <span class="mono">e</span></h2>
+   <ul><li style="--dl:.4s">Aynı harf: e = p(a)² → L–L: 0.5² = <b class="mono">0.25</b></li>
+   <li style="--dl:.9s">Farklı harf: e = <b>2</b>·p(a)·p(b) → L–I: 2·0.5·0.25 = <b class="mono">0.25</b></li>
+   <li style="--dl:1.4s">I–V: 2·0.25·0.25 = <b class="mono">0.125</b></li></ul>
+   <div class="box" style="--dl:2.2s">Neden 2? L–I çifti iki sırada çıkabilir: (L,I) ve (I,L). Bu çarpanı unutmak en sık hatadır.</div>`},
+  {dur:8,svg:()=>s2SVG(5),panel:()=>`<p class="eyebrow">Sahne 2 · Adım 5</p><h2>Skor: <span class="mono">log₂(q / e)</span></h2>
+   <ul><li style="--dl:.4s">L–I: log₂(0.333 / 0.25) = <b class="mono" style="color:var(--pos)">+0.42</b></li>
+   <li style="--dl:.8s">L–L: log₂(0.167 / 0.25) = <b class="mono" style="color:var(--neg)">−0.58</b></li></ul>
+   <div class="box" style="--dl:2.6s">Gerçek BLOSUM'da bu değer 2 ile çarpılıp tamsayıya yuvarlanır (yarım bit).</div>`},
+  {dur:9,svg:()=>s2SVG(5),panel:()=>`<p class="eyebrow">Sahne 2 · Ders</p><h2>Tek sütun gürültülüdür</h2>
+   <p>L–L, aynı harfin eşleşmesi olmasına rağmen <b>negatif</b> çıktı. Sebep: sütunun yarısı zaten L; L–L çiftini beklenenden az gördük.</p>
+   <div class="box" style="--dl:1s">BLOSUM62 yaklaşık <b>2000 bloktan</b> ve binlerce sütundan toplanan sayımlarla hesaplanır. Veri arttıkça skorlar kararlı hâle gelir.</div>
+   <p class="later" style="--dl:2s"><b>62</b> ne demek? Birbirine <b>%62'den fazla</b> özdeş diziler tek bir küme sayılır; böylece çok yakın akrabalar sayımı domine etmez.</p>`},
+];
+
+/* ---------- SAHNE 3: BLOSUM62 haritası ---------- */
+const ORD="CSTPAGNDEQHRKMILVFYW";
+const B62=[[9,-1,-1,-3,0,-3,-3,-3,-4,-3,-3,-3,-3,-1,-1,-1,-1,-2,-2,-2],[-1,4,1,-1,1,0,1,0,0,0,-1,-1,0,-1,-2,-2,-2,-2,-2,-3],[-1,1,5,-1,0,-2,0,-1,-1,-1,-2,-1,-1,-1,-1,-1,0,-2,-2,-2],[-3,-1,-1,7,-1,-2,-2,-1,-1,-1,-2,-2,-1,-2,-3,-3,-2,-4,-3,-4],[0,1,0,-1,4,0,-2,-2,-1,-1,-2,-1,-1,-1,-1,-1,0,-2,-2,-3],[-3,0,-2,-2,0,6,0,-1,-2,-2,-2,-2,-2,-3,-4,-4,-3,-3,-3,-2],[-3,1,0,-2,-2,0,6,1,0,0,1,0,0,-2,-3,-3,-3,-3,-2,-4],[-3,0,-1,-1,-2,-1,1,6,2,0,-1,-2,-1,-3,-3,-4,-3,-3,-3,-4],[-4,0,-1,-1,-1,-2,0,2,5,2,0,0,1,-2,-3,-3,-2,-3,-2,-3],[-3,0,-1,-1,-1,-2,0,0,2,5,0,1,1,0,-3,-2,-2,-3,-1,-2],[-3,-1,-2,-2,-2,-2,1,-1,0,0,8,0,-1,-2,-3,-3,-3,-1,2,-2],[-3,-1,-1,-2,-1,-2,0,-2,0,1,0,5,2,-1,-3,-2,-3,-3,-2,-3],[-3,0,-1,-1,-1,-2,0,-1,1,1,-1,2,5,-1,-3,-2,-2,-3,-2,-3],[-1,-1,-1,-2,-1,-3,-2,-3,-2,0,-2,-1,-1,5,1,2,1,0,-1,-1],[-1,-2,-1,-3,-1,-4,-3,-3,-3,-3,-3,-3,-3,1,4,2,3,0,-1,-3],[-1,-2,-1,-3,-1,-4,-3,-4,-3,-2,-3,-2,-2,2,2,4,1,0,-1,-2],[-1,-2,0,-2,0,-3,-3,-3,-2,-2,-3,-3,-2,1,3,1,4,-1,-1,-3],[-2,-2,-2,-4,-2,-3,-3,-3,-3,-3,-1,-3,-3,0,0,0,-1,6,3,1],[-2,-2,-2,-3,-2,-3,-2,-3,-2,-1,2,-2,-2,-1,-1,-1,-1,3,7,2],[-2,-3,-2,-4,-3,-2,-4,-4,-3,-2,-2,-3,-3,-1,-3,-2,-3,1,2,11]];
+const ix=a=>ORD.indexOf(a);
+const HX0=50, HY0=46, HC=22.5;
+function heatFill(v){ if(v>0) return `color-mix(in oklab, var(--pos) ${Math.round(18+v/11*82)}%, var(--cell))`; if(v<0) return `color-mix(in oklab, var(--neg) ${Math.round(12+(-v)/4*58)}%, var(--cell))`; return "var(--cell)"; }
+function s3SVG(mode){
+  // mode: all, diag, hydro, charged, radical, sym
+  const hl=(i,j)=>{
+    if(mode==="all")return true;
+    if(mode==="diag")return i===j;
+    if(mode==="hydro")return i>=13&&i<=16&&j>=13&&j<=16;
+    if(mode==="charged")return (i>=6&&i<=9&&j>=6&&j<=9)||(i>=10&&i<=12&&j>=10&&j<=12);
+    if(mode==="radical"){const k=ORD[i]+ORD[j]; return ["WG","GW","CE","EC"].includes(k);}
+    if(mode==="sym"){const k=ORD[i]+ORD[j]; return ["IV","VI","DE","ED"].includes(k)||i===j;}
+  };
+  let h="";
+  for(let q=0;q<20;q++){
+    const lab=(mode!=="all")&&[...Array(20).keys()].some(r=>hl(q,r)&&mode!=="sym"&&mode!=="diag");
+    h+=T(HX0+q*HC+HC/2,HY0-8,ORD[q],"m"+(lab?" acc":""),"text-anchor=\"middle\" font-size=\"12\" font-weight=\"600\"");
+    h+=T(HX0-9,HY0+q*HC+HC/2+4,ORD[q],"m"+(lab?" acc":""),"text-anchor=\"middle\" font-size=\"12\" font-weight=\"600\"");
+  }
+  for(let i=0;i<20;i++)for(let j=0;j<20;j++){
+    const v=B62[i][j], x=HX0+j*HC, y=HY0+i*HC, on=hl(i,j);
+    const dl= mode==="all" ? .1+(i+j)*.045 : 0;
+    const strong=v>=6;
+    h+=`<g class="${mode==="all"?"ap":(on?"":"dimmed")}" style="--dl:${dl}s"><rect x="${x+.6}" y="${y+.6}" width="${HC-1.2}" height="${HC-1.2}" rx="3" fill="${heatFill(v)}"/>`;
+    h+=T(x+HC/2,y+HC/2+4,fmt(v),"m","text-anchor=\"middle\" font-size=\"10.5\" font-weight=\"600\" style=\"fill:"+(strong?"var(--on-pos)":"var(--ink)")+"\"")+`</g>`;
+  }
+  const box=(a,b,c="var(--ink)",dl=.4)=>`<rect class="ap" style="--dl:${dl}s" x="${HX0+a*HC-1}" y="${HY0+a*HC-1}" width="${(b-a+1)*HC+2}" height="${(b-a+1)*HC+2}" rx="5" fill="none" stroke="${c}" stroke-width="2.5"/>`;
+  const ring=(i,j,dl)=>`<rect class="pop" style="--dl:${dl}s" x="${HX0+j*HC-2}" y="${HY0+i*HC-2}" width="${HC+4}" height="${HC+4}" rx="5" fill="none" stroke="var(--ink)" stroke-width="2.5"/>`;
+  if(mode==="hydro") h+=box(13,16);
+  if(mode==="charged"){ h+=box(6,9,"var(--ink)",.3); h+=box(10,12,"var(--ink)",.7); }
+  if(mode==="radical"){ h+=ring(ix("W"),ix("G"),.4)+ring(ix("G"),ix("W"),.6)+ring(ix("C"),ix("E"),1)+ring(ix("E"),ix("C"),1.2); }
+  if(mode==="diag"){ [["W",.6],["C",1.1],["A",1.6]].forEach(([a,d])=>{ h+=ring(ix(a),ix(a),d); }); }
+  if(mode==="sym"){ h+=`<line class="draw" pathLength="1" x1="${HX0}" y1="${HY0}" x2="${HX0+20*HC}" y2="${HY0+20*HC}" stroke="var(--accent)" stroke-width="2" stroke-dasharray="1" style="--dl:.3s"/>`;
+    h+=ring(ix("I"),ix("V"),1)+ring(ix("V"),ix("I"),1.3)+ring(ix("D"),ix("E"),1.7)+ring(ix("E"),ix("D"),2); }
+  // açıklama
+  const LX=520;
+  h+=T(LX,HY0+6,"Renk","mut","font-size=\"12\" font-weight=\"600\"");
+  [11,8,4,2,0,-2,-4].forEach((v,q)=>{ const y=HY0+16+q*26; h+=`<rect x="${LX}" y="${y}" width="22" height="20" rx="3" fill="${heatFill(v)}" stroke="var(--line)"/>`+T(LX+30,y+15,fmt(v),"m","font-size=\"12\""); });
+  h+=T(LX,HY0+212,"sık","posT","font-size=\"12\"")+T(LX,HY0+228,"seyrek","negT","font-size=\"12\"");
+  [["C–W","grup sırası"],["",""]];
+  h+=T(LX,HY0+262,"Sıra kimyaya","mut","font-size=\"11\"")+T(LX,HY0+276,"göre gruplu","mut","font-size=\"11\"");
+  return h;
+}
+const S3=[
+  {dur:8,svg:()=>s3SVG("all"),panel:()=>`<p class="eyebrow">Sahne 3 · Harita</p><h2>BLOSUM62: 20 × 20 skor tablosu</h2>
+   <p>Her hücre bir amino asit çiftinin skorudur. Turuncu = homologlarda sık (pozitif), mavi = seyrek (negatif).</p>
+   <div class="box" style="--dl:2s">BLASTP'nin varsayılan matrisi. Biopython: <b>substitution_matrices.load("BLOSUM62")</b></div>
+   <p class="note" style="--dl:3s">Satır ve sütunlar benzer kimyadaki amino asitler yan yana gelecek şekilde sıralandı; bu sayede kümeler görünür.</p>`},
+  {dur:8,svg:()=>s3SVG("diag"),panel:()=>`<p class="eyebrow">Sahne 3 · Köşegen</p><h2>Aynı harf: hep pozitif, ama eşit değil</h2>
+   <ul><li style="--dl:.6s"><b class="mono">W–W = 11</b>: triptofan nadir, korunması güçlü sinyal</li>
+   <li style="--dl:1.1s"><b class="mono">C–C = 9</b>: sistein nadir, disülfit bağları için korunur</li>
+   <li style="--dl:1.6s"><b class="mono">A–A = 4</b>: alanin çok yaygın, rastlantıyla eşleşmesi kolay</li></ul>
+   <div class="box" style="--dl:2.4s">Nadir harfin eşleşmesi daha fazla bilgi taşır.</div>`},
+  {dur:7,svg:()=>s3SVG("hydro"),panel:()=>`<p class="eyebrow">Sahne 3 · Hidrofobik blok</p><h2>M, I, L, V birbirinin yerine geçebilir</h2>
+   <p>Bu dört amino asit hidrofobik ve benzer büyüklükte. Proteinin iç kısmında biri diğerine dönüşse yapı korunur.</p>
+   <div class="box" style="--dl:1.4s">I–V = <b>3</b>, I–L = <b>2</b>, L–M = <b>2</b>: farklı harf ama pozitif skor (muhafazakâr değişim)</div>`},
+  {dur:7,svg:()=>s3SVG("charged"),panel:()=>`<p class="eyebrow">Sahne 3 · Yüklü ve polar bloklar</p><h2>Yük benzerliği de matriste görünür</h2>
+   <ul><li style="--dl:.4s">Negatif yüklü ve amitli grup (N, D, E, Q): <b class="mono">D–E = 2</b>, <b class="mono">E–Q = 2</b></li>
+   <li style="--dl:.9s">Pozitif yüklü grup (H, R, K): <b class="mono">K–R = 2</b></li></ul>
+   <div class="box" style="--dl:1.6s">Matris kimya bilgisiyle yazılmadı; sadece sayımdan çıktı. Kimya kendiliğinden ortaya çıkıyor.</div>`},
+  {dur:7,svg:()=>s3SVG("radical"),panel:()=>`<p class="eyebrow">Sahne 3 · Radikal değişimler</p><h2>Çok farklı kimya → negatif skor</h2>
+   <ul><li style="--dl:.4s"><b class="mono">W–G = −2</b>: dev aromatik halka ↔ yan zincirsiz glisin</li>
+   <li style="--dl:1s"><b class="mono">C–E = −4</b>: disülfit kuran sistein ↔ negatif yüklü glutamat</li></ul>
+   <div class="box" style="--dl:1.6s">Negatif skor, bu değişimin akraba proteinlerde rastlantıdan da <b>seyrek</b> görüldüğü anlamına gelir.</div>`},
+  {dur:8,svg:()=>s3SVG("sym"),panel:()=>`<p class="eyebrow">Sahne 3 · İki özellik</p><h2>Simetrik ve ortalaması negatif</h2>
+   <ul><li style="--dl:.4s"><b>Simetri:</b> s(I,V) = s(V,I). Köşegenin iki yanı aynadır.</li>
+   <li style="--dl:1.2s"><b>Beklenen skor &lt; 0:</b> rastgele iki harfin ortalama skoru ≈ <b class="mono">−0.52</b>.</li></ul>
+   <div class="box" style="--dl:2s">İkinci özellik Smith–Waterman için şarttır: aksi hâlde yerel hizalama tüm diziye yayılırdı.</div>`},
+];
+
+/* ---------- SAHNE 4: hizalamayı skorlamak ---------- */
+const SX="HEAGAWGHEE", SY="PAWHEAE";
+const ACOLS=[{a:"A",b:"A",v:5},{a:"W",b:"W",v:15},{a:"G",b:"-",v:-8},{a:"H",b:"H",v:10},{a:"E",b:"E",v:6}];
+const SUB="AEGHPW", B50={A:[5,-1,0,-2,-1,-3],E:[-1,6,-3,0,-1,-3],G:[0,-3,8,-2,-2,-3],H:[-2,0,-2,10,-2,-3],P:[-1,-1,-2,-2,10,-4],W:[-3,-3,-3,-3,-4,15]};
+function s4SVG(stage){ // stage: 0 intro, 1..5 sütun, 6 toplam, 7 neden
+  let h="";
+  // tam diziler
+  const L0=70;
+  h+=T(20,52,"x","m mut","font-size=\"14\"")+T(20,92,"y","m mut","font-size=\"14\"");
+  SX.split("").forEach((c,q)=>{ const on=q>=4&&q<=8; h+=`<rect x="${L0+q*34-14}" y="32" width="28" height="30" rx="5" fill="${on?"var(--accent-soft)":"none"}"/>`+T(L0+q*34,54,c,"m"+(on?"":" mut"),"text-anchor=\"middle\" font-size=\"18\" font-weight=\"600\""); });
+  SY.split("").forEach((c,q)=>{ const on=q>=1&&q<=4; h+=`<rect x="${L0+q*34-14}" y="72" width="28" height="30" rx="5" fill="${on?"var(--accent-soft)":"none"}"/>`+T(L0+q*34,94,c,"m"+(on?"":" mut"),"text-anchor=\"middle\" font-size=\"18\" font-weight=\"600\""); });
+  h+=T(L0+10*34+6,54,"HEAGAWGHEE","mut","font-size=\"11\" opacity=\"0\"");
+  // yerel hizalama
+  const AX=a=>76+a*58;
+  h+=T(20,154,"Yerel hizalama","mut","font-size=\"12\" font-weight=\"600\"");
+  ACOLS.forEach((c,q)=>{ const x=AX(q), cur=stage===q+1, done=stage>q+1||stage>=6;
+    if(cur) h+=`<rect class="ap" x="${x-24}" y="166" width="48" height="104" rx="9" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/>`;
+    h+=T(x,200,c.a,"m","text-anchor=\"middle\" font-size=\"28\" font-weight=\"600\"");
+    h+=T(x,226,c.b!=="-"?"|":"","m mut","text-anchor=\"middle\" font-size=\"16\"");
+    h+=T(x,258,c.b==="-"?"–":c.b,"m"+(c.b==="-"?" posT":""),"text-anchor=\"middle\" font-size=\"28\" font-weight=\"600\"");
+    if(cur||done){ const col=c.v>0?"var(--pos)":"var(--neg)";
+      h+=`<g class="${cur?"pop":""}" style="--dl:${cur?1.5:0}s"><rect x="${x-22}" y="282" width="44" height="30" rx="7" fill="${c.v>0?"var(--pos-soft)":"var(--neg-soft)"}"/>${T(x,303,(c.v>0?"+":"")+fmt(c.v),"m","text-anchor=\"middle\" font-size=\"16\" font-weight=\"700\" fill=\""+col+"\"")}</g>`; }
+  });
+  // toplam satırı
+  if(stage>=1){
+    const got=Math.min(stage,5); let sum=0; for(let q=0;q<got;q++)sum+=ACOLS[q].v;
+    h+=`<g>${T(20,370,"Toplam","mut","font-size=\"12\" font-weight=\"600\"")}`;
+    h+=`<g class="${stage<=5?"pop":""}" style="--dl:${stage<=5?1.9:0}s">${T(20,420,"= "+sum,"m","font-size=\"40\" font-weight=\"700\""+(stage>=6?" fill=\"var(--pos)\"":""))}</g>`;
+    if(stage>=6) h+=`<g class="ap" style="--dl:.3s">${T(150,412,"5 + 15 − 8 + 10 + 6","m mut","font-size=\"16\"")}</g>`;
+    h+=`</g>`;
+  }
+  // alt matris
+  const MX=400, MY=172, MC=30;
+  h+=T(MX,MY-28,"BLOSUM50 (parça)","mut","font-size=\"12\" font-weight=\"600\"");
+  const cur=stage>=1&&stage<=5?ACOLS[stage-1]:null;
+  const ri=cur&&cur.b!=="-"?SUB.indexOf(cur.a):-1, ci=cur&&cur.b!=="-"?SUB.indexOf(cur.b):-1;
+  SUB.split("").forEach((c,q)=>{ h+=T(MX+q*MC+MC/2,MY-8,c,"m"+(q===ci?" acc":""),"text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\"")+T(MX-10,MY+q*MC+MC/2+5,c,"m"+(q===ri?" acc":""),"text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\""); });
+  for(let i=0;i<6;i++)for(let j=0;j<6;j++){ const v=B50[SUB[i]][j], x=MX+j*MC, y=MY+i*MC;
+    const inCross=(ri>=0&&(i===ri||j===ci)), isCell=(i===ri&&j===ci);
+    const dim = cur&&!inCross ? " dimmed":"";
+    const fill = v>0?`color-mix(in oklab, var(--pos) ${Math.round(15+v/15*85)}%, var(--cell))`:v<0?`color-mix(in oklab, var(--neg) ${Math.round(10+(-v)/4*50)}%, var(--cell))`:"var(--cell)";
+    h+=`<g class="${dim}"><rect x="${x+.8}" y="${y+.8}" width="${MC-1.6}" height="${MC-1.6}" rx="4" fill="${fill}"/>${T(x+MC/2,y+MC/2+5,fmt(v),"m","text-anchor=\"middle\" font-size=\"12.5\" font-weight=\"600\" style=\"fill:"+(v>=8?"var(--on-pos)":"var(--ink)")+"\"")}</g>`;
+    if(isCell) h+=`<rect class="pop" style="--dl:.8s" x="${x-2}" y="${y-2}" width="${MC+4}" height="${MC+4}" rx="6" fill="none" stroke="var(--ink)" stroke-width="3"/>`;
+  }
+  if(cur&&cur.b==="-") h+=`<g class="pop" style="--dl:.6s"><rect x="${MX}" y="${MY+6*MC+14}" width="180" height="34" rx="8" fill="var(--neg-soft)"/>${T(MX+90,MY+6*MC+36,"Boşluk: matris değil, −8","m negT","text-anchor=\"middle\" font-size=\"13\" font-weight=\"600\"")}</g>`;
+  if(stage===7){
+    h+=`<g class="ap" style="--dl:.3s"><rect class="card" x="20" y="448" width="560" height="62" rx="10"/>`;
+    h+=T(36,472,"W–W","m posT","font-size=\"14\" font-weight=\"700\"")+`<rect class="grow" x="90" y="460" width="${15*24}" height="14" rx="3" fill="var(--pos)" style="--dl:.6s"/>`+T(100+15*24,472,"15","m","font-size=\"13\"");
+    h+=T(36,498,"A–A","m posT","font-size=\"14\" font-weight=\"700\"")+`<rect class="grow" x="90" y="486" width="${5*24}" height="14" rx="3" fill="var(--pos)" style="--dl:.9s"/>`+T(100+5*24,498,"5","m","font-size=\"13\"")+`</g>`;
+  }
+  return h;
+}
+const S4=[
+  {dur:8,svg:()=>s4SVG(0),panel:()=>`<p class="eyebrow">Sahne 4 · Kullanım</p><h2>Matristen hizalama skoruna</h2>
+   <p>Klasik örnek (Durbin ve ark.): <b class="mono">HEAGAWGHEE</b> ile <b class="mono">PAWHEAE</b>, <b>BLOSUM50</b> ve boşluk cezası <b>−8</b> ile yerel hizalandı.</p>
+   <div class="box" style="--dl:1.2s">En iyi yerel hizalama: <b>AWGHE / AW-HE</b>. Şimdi skorunu sütun sütun hesaplayalım.</div>
+   <p class="note" style="--dl:2s">Her sütun için matristen satır = x harfi, sütun = y harfi okunur.</p>`},
+  ...ACOLS.map((c,q)=>({dur:5.5,svg:()=>s4SVG(q+1),panel:()=>`<p class="eyebrow">Sahne 4 · Sütun ${q+1} / 5</p>
+   <h2><span class="mono">${c.a} / ${c.b==="-"?"–":c.b}</span> → <span class="mono" style="color:${c.v>0?"var(--pos)":"var(--neg)"}">${c.v>0?"+":""}${fmt(c.v)}</span></h2>
+   <p>${c.b==="-"?"y'de bu konumda harf yok: boşluk. Skoru matristen değil, boşluk cezasından gelir.":`Matriste <b>${c.a}</b> satırı ile <b>${c.b}</b> sütununun kesiştiği hücre.`}</p>
+   ${q===1?`<div class="box" style="--dl:1.4s">W–W = 15, tablodaki en büyük değer: triptofan nadir.</div>`:""}
+   ${q===2?`<div class="box" style="--dl:1.4s">Bu boşluk neden açıldı? Sonraki H/H (+10) ve E/E (+6) eşleşmelerini hizaya getirdiği için −8'e değiyor.</div>`:""}`})),
+  {dur:8,svg:()=>s4SVG(6),panel:()=>`<p class="eyebrow">Sahne 4 · Toplam</p><h2>Yerel skor: <span class="mono">28</span></h2>
+   <div class="box" style="--dl:.4s">5 + 15 − 8 + 10 + 6 = <b>28</b> (Biopython PairwiseAligner ile aynı)</div>
+   <p class="later" style="--dl:1.2s">Aynı parametrelerle <b>global</b> hizalama yalnızca <b>1</b> puan alır: dizilerin uçlarını zorla hizalamak 5 boşluk (−40) gerektirir.</p>`},
+  {dur:9,svg:()=>s4SVG(7),panel:()=>`<p class="eyebrow">Sahne 4 · Neden matris?</p><h2>Her eşleşme aynı değerde değil</h2>
+   <p>+1/−1 puanlamasıyla W–W ve A–A eşleşmeleri aynı puanı alırdı. BLOSUM50'de W–W, A–A'nın <b>üç katı</b>.</p>
+   <div class="box" style="--dl:1.2s">Nadir ve korunmuş bir harfin eşleşmesi daha güçlü akrabalık kanıtıdır; matris bunu skora yansıtır.</div>
+   <p class="note" style="--dl:2s">BLOSUM50 ve BLOSUM62 farklı ölçeklerdedir; ham skorları birbirine karıştırmayın.</p>`},
+];
+
+/* ---------- Oynatıcı ---------- */
+const SCENES=[S1,S2,S3,S4];
+const steps=[]; const sceneStart=[];
+SCENES.forEach((S,si)=>{ sceneStart.push(steps.length); S.forEach((st,k)=>steps.push({...st,sc:si,k,of:S.length})); });
+const N=steps.length;
+let cur=0, playing=false, timer=null, speed=1, stopAt=null;
+const slider=document.getElementById("slider"), cnt=document.getElementById("cnt"), bPlay=document.getElementById("bPlay");
+slider.max=N-1;
+function show(k){
+  cur=Math.max(0,Math.min(N-1,k));
+  const st=steps[cur];
+  sv.innerHTML=st.svg(); panel.innerHTML=st.panel();
+  slider.value=cur; cnt.textContent=`Sahne ${st.sc+1} · adım ${st.k+1} / ${st.of}`;
+  document.querySelectorAll("#scenes button").forEach(b=>b.setAttribute("aria-current",String(+b.dataset.sc===st.sc)));
+  schedule();
+}
+function schedule(){
+  clearTimeout(timer);
+  if(!playing)return;
+  if(cur>=N-1 || (stopAt!==null && cur>=stopAt)){ playing=false; updPlay(); window.__done=true; return; }
+  timer=setTimeout(()=>show(cur+1), steps[cur].dur*1000/speed);
+}
+function updPlay(){ bPlay.textContent=playing?"❚❚ Duraklat":(cur>=N-1?"↺ Baştan":"▶ Oynat"); }
+function toggle(){ if(!playing&&cur>=N-1){ playing=true; updPlay(); show(0); return; } playing=!playing; updPlay(); schedule(); }
+bPlay.onclick=toggle;
+document.getElementById("bNext").onclick=()=>show(cur+1);
+document.getElementById("bPrev").onclick=()=>show(cur-1);
+document.getElementById("bStart").onclick=()=>show(sceneStart[steps[cur].sc]);
+slider.oninput=()=>show(+slider.value);
+document.querySelectorAll("#scenes button").forEach(b=>b.onclick=()=>show(sceneStart[+b.dataset.sc]));
+document.querySelectorAll(".speed button").forEach(b=>b.onclick=()=>{
+  speed=+b.dataset.s; document.documentElement.style.setProperty("--k",String(1/speed));
+  document.querySelectorAll(".speed button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  schedule();
+});
+document.addEventListener("keydown",e=>{
+  if(e.code==="Space"){e.preventDefault();toggle();}
+  else if(e.key==="ArrowRight"){e.preventDefault();show(cur+1);}
+  else if(e.key==="ArrowLeft"){e.preventDefault();show(cur-1);}
+});
+const mh=/^#sahne-(\d)$/.exec(location.hash||"");
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+playing=!reduce; updPlay(); show(mh?sceneStart[Math.min(3,Math.max(0,+mh[1]-1))]:0);
+window.__bl={show,steps,N,sceneStart,playScene:(s)=>{stopAt=(s<3?sceneStart[s+1]-1:N-1);window.__done=false;playing=true;updPlay();show(sceneStart[s]);},
+  sceneDur:(s)=>steps.filter(x=>x.sc===s).reduce((a,x)=>a+x.dur,0)};
+})();
+</script>
+
+</body></html>
