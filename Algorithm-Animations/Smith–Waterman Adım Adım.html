@@ -1,0 +1,463 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Smith–Waterman Adım Adım</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Düzen (yerel hizalama): solda DP matrisi (SVG), sağda o anki hücrenin hesabı; altta hizalama şeridi ve oynatma kontrolleri */
+:root{
+  --bg:#EEF2F5; --surface:#FFFFFF; --ink:#16202B; --muted:#586674; --line:#D3DBE2; --cell:#F7F9FA; --filled:#FFFFFF;
+  --accent:#2251C9; --accent-soft:#DCE5FB;
+  --diag:#0E8A6B; --diag-soft:#D9F1EA; --up:#7A3FD1; --up-soft:#ECE2FA; --left:#C85F05; --left-soft:#FBE8D6;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --zero:#7C8894; --zero-soft:#E6EBEF;
+  --k:1;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E141A; --surface:#161F28; --ink:#E5ECF2; --muted:#93A2B0; --line:#2B3744; --cell:#141C24; --filled:#1C2733;
+  --accent:#7DA3FF; --accent-soft:#1D2D52;
+  --diag:#3DCB9E; --diag-soft:#123A30; --up:#B58EFF; --up-soft:#2C2147; --left:#FF9E4F; --left-soft:#3D2814; --zero:#8D9AA7; --zero-soft:#222D38;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#161F28; --ink:#E5ECF2; --muted:#93A2B0; --line:#2B3744; --cell:#141C24; --filled:#1C2733;
+  --accent:#7DA3FF; --accent-soft:#1D2D52;
+  --diag:#3DCB9E; --diag-soft:#123A30; --up:#B58EFF; --up-soft:#2C2147; --left:#FF9E4F; --left-soft:#3D2814; --zero:#8D9AA7; --zero-soft:#222D38;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(24px,3.4vw,34px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;font-size:14px}
+.sub b{font-family:var(--f-mono);color:var(--ink);font-weight:600}
+.phases{display:flex;gap:6px;flex-wrap:wrap;list-style:none;margin:0;padding:0}
+.phases li{font-size:12.5px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface);white-space:nowrap}
+.phases li span{font-family:var(--f-mono);margin-right:5px}
+.phases li.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.phases li.past{color:var(--ink)}
+
+main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.stage svg{display:block;width:100%;height:auto;max-height:72vh}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-height:330px}
+.eyebrow{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 4px}
+.panel h2{font-family:var(--f-display);font-weight:600;font-size:23px;margin:0 0 6px;line-height:1.2;text-wrap:balance}
+.panel h2 .mono{font-family:var(--f-mono);font-size:21px}
+.panel p{margin:6px 0;max-width:62ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.pair{display:inline-flex;gap:4px;align-items:center;font-family:var(--f-mono);font-weight:600}
+.chip{display:inline-block;font-family:var(--f-mono);font-weight:600;padding:1px 8px;border-radius:6px;background:var(--cell);border:1px solid var(--line)}
+.cands{display:flex;flex-direction:column;gap:6px;margin:12px 0 10px}
+.cand{display:grid;grid-template-columns:30px 76px minmax(0,1fr) auto;align-items:center;gap:8px;padding:7px 10px;border-radius:9px;border:1.5px solid transparent;background:var(--cell)}
+.cand .ic{font-size:19px;font-weight:700;text-align:center;line-height:1}
+.cand .nm{font-weight:600;font-size:14px}
+.cand .ex{font-family:var(--f-mono);font-size:14px;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+.cand .ex small{font-family:var(--f-body);color:var(--muted);font-size:12px;display:block}
+.cand .vv{font-family:var(--f-mono);font-weight:600;font-size:17px;min-width:3ch;text-align:right}
+.cand.d .ic,.cand.d .nm{color:var(--diag)} .cand.u .ic,.cand.u .nm{color:var(--up)} .cand.l .ic,.cand.l .nm{color:var(--left)}
+.cand.z .ic,.cand.z .nm{color:var(--zero)} .cand.z.win{--wc:var(--zero);--ws:var(--zero-soft)}
+.cand.d.win{--wc:var(--diag);--ws:var(--diag-soft)} .cand.u.win{--wc:var(--up);--ws:var(--up-soft)} .cand.l.win{--wc:var(--left);--ws:var(--left-soft)}
+.cand{animation:appear calc(.3s*var(--k)) both;animation-delay:calc(var(--dl)*var(--k))}
+.cand.win{animation:appear calc(.3s*var(--k)) both, winbg calc(.35s*var(--k)) forwards;animation-delay:calc(var(--dl)*var(--k)),calc(var(--wd)*var(--k))}
+.cand.lose{animation:appear calc(.3s*var(--k)) both, dim calc(.35s*var(--k)) forwards;animation-delay:calc(var(--dl)*var(--k)),calc(var(--wd)*var(--k))}
+@keyframes winbg{to{background:var(--ws);border-color:var(--wc)}}
+@keyframes dim{to{opacity:.45}}
+.verdict{font-size:16px;padding:10px 12px;border-radius:9px;background:var(--accent-soft);animation:appear calc(.3s*var(--k)) both;animation-delay:calc(var(--dl)*var(--k))}
+.verdict b{font-family:var(--f-mono)}
+.note{color:var(--muted);font-size:13.5px;animation:appear calc(.3s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.later{animation:appear calc(.3s*var(--k)) both;animation-delay:calc(var(--dl)*var(--k))}
+.scoring{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.scoring div{border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--cell);min-width:120px}
+.scoring b{display:block;font-family:var(--f-mono);font-size:20px}
+.scoring span{font-size:12.5px;color:var(--muted)}
+.formula{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px;font-size:14px}
+.formula .row{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;font-family:var(--f-mono);font-size:13.5px}
+.formula .lbl{font-family:var(--f-body);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.formula .z{color:var(--zero)} .formula .d{color:var(--diag)} .formula .u{color:var(--up)} .formula .l{color:var(--left)}
+
+.aln{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.aln-grid{display:grid;grid-template-columns:auto repeat(6,minmax(0,40px));gap:4px 6px;align-items:center;justify-content:start;margin-top:6px}
+.aln-grid .h{font-family:var(--f-mono);color:var(--muted);font-size:13px;padding-right:4px}
+.slot{height:36px;border-radius:7px;border:1.5px dashed var(--line);display:grid;place-items:center;font-family:var(--f-mono);font-weight:600;font-size:18px}
+.slot.fill{border-style:solid;border-color:var(--accent);background:var(--accent-soft);animation:pop calc(.4s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.slot.old{border-style:solid;border-color:var(--line);background:var(--cell)}
+.slot.gap{color:var(--left)}
+.bar{text-align:center;font-family:var(--f-mono);color:var(--muted);height:16px;line-height:16px;font-size:14px}
+.sc{text-align:center;font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+.sc.pos{color:var(--diag)} .sc.neg{color:var(--left)}
+
+.controls{position:sticky;bottom:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;z-index:5}
+button{font:inherit;font-size:14px;font-weight:600;color:var(--ink);background:var(--cell);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;min-height:38px}
+button:hover{border-color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);min-width:118px}
+.speed{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.speed button{border:0;border-radius:0;background:transparent;font-family:var(--f-mono);padding:8px 10px;min-height:36px}
+.speed button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.prog{flex:1 1 220px;display:flex;align-items:center;gap:10px;min-width:0}
+.prog input{flex:1;min-width:0;accent-color:var(--accent)}
+.prog .cnt{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap}
+.keys{font-size:12px;color:var(--muted);width:100%}
+@media (max-width:560px){.keys,.speed{display:none}.controls{gap:6px}.controls button{padding:7px 9px;font-size:13px}button.primary{min-width:96px}}
+
+/* SVG */
+svg text{font-family:var(--f-mono)}
+.c-bg{fill:var(--cell);stroke:var(--line);stroke-width:1}
+.c-bg.filled{fill:var(--filled)}
+.c-bg.path{fill:var(--accent-soft);stroke:var(--accent);stroke-width:2}
+.c-bg.cur{stroke:var(--ink);stroke-width:3}
+.c-bg.nb-d{fill:var(--diag-soft);stroke:var(--diag);stroke-width:2}
+.c-bg.nb-u{fill:var(--up-soft);stroke:var(--up);stroke-width:2}
+.c-bg.nb-l{fill:var(--left-soft);stroke:var(--left);stroke-width:2}
+.val{fill:var(--ink);font-size:17px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.val.dot{fill:var(--line)}
+.val.zero{fill:var(--zero);font-weight:500}
+.heat{fill:var(--accent)}
+.maxring{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-dasharray:5 4}
+.maxtag{fill:var(--accent);font-size:12px;font-weight:600;text-anchor:middle;font-family:var(--f-body)}
+.ex-out{color:var(--muted);opacity:.55}
+.ex-in{background:var(--accent-soft);border-radius:4px}
+.hdr{fill:var(--ink);font-size:18px;font-weight:600;text-anchor:middle;dominant-baseline:central}
+.hdr.dash{fill:var(--muted)}
+.hdr-bg{fill:transparent}
+.hdr-bg.hl{fill:var(--accent-soft)}
+.idx{fill:var(--muted);font-size:10px;text-anchor:middle}
+.axis{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+.gl{font-size:11px;font-weight:600}
+.gl.d{fill:var(--diag)} .gl.u{fill:var(--up)} .gl.l{fill:var(--left)}
+.ar{fill:none;stroke-width:3.2;stroke-linecap:round}
+.ar.d{stroke:var(--diag)} .ar.u{stroke:var(--up)} .ar.l{stroke:var(--left)}
+.mk.d{fill:var(--diag)} .mk.u{fill:var(--up)} .mk.l{fill:var(--left)}
+.albl{font-size:12px;font-weight:600;text-anchor:end;dominant-baseline:central;}
+.albl.d{fill:var(--diag)} .albl.u{fill:var(--up)} .albl.l{fill:var(--left)}
+.pathline{fill:none;stroke:var(--accent);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;opacity:.55}
+.ring{fill:none;stroke:var(--accent);stroke-width:3}
+.pop{transform-box:fill-box;transform-origin:center;animation:pop calc(.45s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.ap{animation:appear calc(.3s*var(--k)) both;animation-delay:calc(var(--dl,0s)*var(--k))}
+.draw{stroke-dasharray:1;stroke-dashoffset:1;animation:draw calc(.4s*var(--k)) forwards;animation-delay:calc(var(--dl,0s)*var(--k))}
+.loseg{animation:dim2 calc(.35s*var(--k)) forwards;animation-delay:calc(var(--dl,0s)*var(--k))}
+@keyframes pop{from{opacity:0;transform:scale(.35)}70%{transform:scale(1.15)}to{opacity:1;transform:scale(1)}}
+@keyframes appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes dim2{to{opacity:.15}}
+@media (prefers-reduced-motion:reduce){*,*::before{animation-duration:.01ms!important;animation-delay:0s!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Smith–Waterman, adım adım</h1>
+      <p class="sub">Yerel hizalama · x = <b>TGTTACGG</b> (satırlar) · y = <b>GGTTGACTA</b> (sütunlar) · eşleşme <b>+3</b>, uyumsuzluk <b>−3</b>, boşluk <b>−2</b></p>
+    </div>
+    <ol class="phases" id="phases">
+      <li data-p="0"><span>1</span>Başlangıç</li>
+      <li data-p="1"><span>2</span>Matrisi doldurma</li>
+      <li data-p="2"><span>3</span>En büyük hücre</li>
+      <li data-p="3"><span>4</span>Geri izleme</li>
+      <li data-p="4"><span>5</span>Sonuç</li>
+    </ol>
+  </header>
+
+  <main>
+    <div class="stage"><svg id="mx" viewBox="0 0 612 552" role="img" aria-label="Smith–Waterman dinamik programlama matrisi"></svg></div>
+    <div class="side">
+      <section class="panel" id="panel" aria-live="polite"></section>
+      <section class="formula">
+        <div class="lbl">Her hücrenin kuralı</div>
+        <div class="row">H(i,j) = max {
+          <span class="z">0</span>
+          <span class="d">↖ H(i−1,j−1) + s(xᵢ,yⱼ)</span>
+          <span class="u">↑ H(i−1,j) − 2</span>
+          <span class="l">← H(i,j−1) − 2</span> }</div>
+      </section>
+      <section class="aln" id="aln"></section>
+    </div>
+  </main>
+
+  <div class="controls">
+    <button id="bStart" title="Baştan başla">⏮ Baştan</button>
+    <button id="bPrev" title="Önceki adım">◀ Geri</button>
+    <button id="bPlay" class="primary">▶ Oynat</button>
+    <button id="bNext" title="Sonraki adım">İleri ▶</button>
+    <div class="speed" role="group" aria-label="Hız">
+      <button data-s="0.5" aria-pressed="false">0.5×</button>
+      <button data-s="1" aria-pressed="true">1×</button>
+      <button data-s="2" aria-pressed="false">2×</button>
+    </div>
+    <div class="prog"><input type="range" id="slider" min="0" value="0" aria-label="Adım seç"><span class="cnt" id="cnt"></span></div>
+    <div class="keys">Klavye: Boşluk = oynat / duraklat · ← → = adım adım ilerle · Önemli hücreler yavaş, diğerleri hızlı geçer</div>
+  </div>
+</div>
+
+<script>
+(function(){
+const X="TGTTACGG", Y="GGTTGACTA", MATCH=3, MIS=-3, GAP=-2;
+const m=X.length, n=Y.length;
+const fmt=v=>v<0?"−"+(-v):String(v);
+const sgn=v=>v<0?"− "+(-v):"+ "+v;
+
+// --- DP ---
+const H=[],D=[],C=[];
+for(let i=0;i<=m;i++){H.push(new Array(n+1).fill(0));D.push([]);C.push([]);}
+for(let i=0;i<=m;i++)D[i][0]=[];
+for(let j=0;j<=n;j++)D[0][j]=[];
+for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+  const s=X[i-1]===Y[j-1]?MATCH:MIS;
+  const c={d:H[i-1][j-1]+s,u:H[i-1][j]+GAP,l:H[i][j-1]+GAP,s};
+  const b=Math.max(0,c.d,c.u,c.l);
+  H[i][j]=b; C[i][j]=c; D[i][j]=b>0?["d","u","l"].filter(k=>c[k]===b):[];
+}
+// argmax (satır satır ilk en büyük)
+let MI=0,MJ=0; for(let i=0;i<=m;i++)for(let j=0;j<=n;j++) if(H[i][j]>H[MI][MJ]){MI=i;MJ=j;}
+const MAXV=H[MI][MJ];
+// geri izleme: max'tan başla, H = 0 olunca dur (eşitlikte çapraz önce)
+const path=[]; {let i=MI,j=MJ; while(H[i][j]>0){ const dir=D[i][j][0]; path.push({i,j,dir}); if(dir==="d"){i--;j--;}else if(dir==="u"){i--;}else{j--;} } path.push({i,j,dir:null}); }
+const cols=path.filter(p=>p.dir).map(p=>p.dir==="d"?{a:X[p.i-1],b:Y[p.j-1]}:p.dir==="u"?{a:X[p.i-1],b:"-"}:{a:"-",b:Y[p.j-1]});
+const L=cols.length;
+const endCell=path[path.length-1];
+
+// --- Adımlar ---
+const KEY=new Set(["1,1","1,2","1,3","1,5","2,5","3,3","4,4","4,5","5,6","6,7","7,8"]);
+const steps=[]; const fillAt={};
+const key=(i,j)=>i+","+j;
+steps.push({t:"intro",dur:8,ph:0});
+steps.push({t:"init",dur:5,ph:0}); for(let i=0;i<=m;i++)fillAt[key(i,0)]=1; for(let j=0;j<=n;j++)fillAt[key(0,j)]=1;
+let cellCount=0, slowCount=0;
+for(let i=1;i<=m;i++)for(let j=1;j<=n;j++){
+  cellCount++; const slow=KEY.has(key(i,j)); if(slow)slowCount++;
+  steps.push({t:"cell",i,j,ph:1,no:cellCount,slow,dur:slow?(slowCount<=2?6.5:5.2):1.25,f:slow?1:.32});
+  fillAt[key(i,j)]=steps.length-1;
+}
+steps.push({t:"max",dur:6,ph:2});
+const tbStart=steps.length;
+path.forEach((p,k)=>steps.push({t:p.dir?"tb":"tbEnd",i:p.i,j:p.j,k,dur:p.dir?4.8:5,ph:3}));
+steps.push({t:"final",dur:12,ph:4});
+const N=steps.length;
+// her adımda şimdiye kadarki en büyük
+const runMax=[]; {let bi=-1,bj=-1,bv=-1; const order=[]; for(let i=0;i<=m;i++)for(let j=0;j<=n;j++)order.push([i,j]);
+  for(let k=0;k<N;k++){ for(const [i,j] of order){ if(fillAt[key(i,j)]===k && H[i][j]>bv){bv=H[i][j];bi=i;bj=j;} } runMax.push({i:bi,j:bj,v:bv,newAt:false}); }
+  for(let k=1;k<N;k++) runMax[k].newAt = runMax[k].v>runMax[k-1].v; }
+
+// --- SVG ---
+const S=52, OX=32, OY=24;
+const cx=j=>OX+(j+1)*S+S/2, cy=i=>OY+(i+1)*S+S/2;
+const svg=document.getElementById("mx");
+function arrowSVG(dir,i,j,dl,lose,label){
+  const from = dir==="d"?[i-1,j-1]:dir==="u"?[i-1,j]:[i,j-1];
+  let x1=cx(from[1]),y1=cy(from[0]),x2=cx(j),y2=cy(i);
+  const dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
+  const sh=dir==="d"?21:15;
+  x1+=ux*sh;y1+=uy*sh;x2-=ux*(sh+4);y2-=uy*(sh+4);
+  const bx=OX+(from[1]+1)*S+S-7, by=OY+(from[0]+1)*S+S-9;
+  let g=`<g class="ap" style="--dl:${dl}s">`;
+  g+= lose!==false?`<g class="loseg" style="--dl:${lose}s">`:`<g>`;
+  g+=`<path class="ar ${dir} draw" pathLength="1" d="M${x1},${y1} L${x2},${y2}" marker-end="url(#mk-${dir})" style="--dl:${dl}s"/>`;
+  g+=`<text class="albl ${dir}" x="${bx}" y="${by}">${label}</text>`;
+  return g+`</g></g>`;
+}
+function renderSVG(k){
+  const st=steps[k];
+  let h=`<defs>${["d","u","l"].map(d=>`<marker id="mk-${d}" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4.2" markerHeight="4.2" orient="auto-start-reverse"><path class="mk ${d}" d="M0,0 L10,5 L0,10 z"/></marker>`).join("")}</defs>`;
+  h+=`<text class="axis" x="${OX+S*1.5}" y="${OY-8}">y →  (j)</text>`;
+  h+=`<text class="axis" x="${OX-26}" y="${OY+S*1.5+16}" transform="rotate(-90 ${OX-14} ${OY+S*1.5+16})">x ↓  (i)</text>`;
+  const focus=(st.t==="cell"||st.t==="tb"||st.t==="tbEnd")?st:null;
+  ["–",...Y].forEach((c,j)=>{
+    const hl=focus&&focus.j===j&&j>0;
+    h+=`<rect class="hdr-bg ${hl?"hl":""}" x="${OX+(j+1)*S+3}" y="${OY+3}" width="${S-6}" height="${S-6}" rx="8"/>`;
+    h+=`<text class="hdr ${j===0?"dash":""}" x="${cx(j)}" y="${OY+S/2-4}">${c}</text><text class="idx" x="${cx(j)}" y="${OY+S-6}">${j}</text>`;
+  });
+  ["–",...X].forEach((c,i)=>{
+    const hl=focus&&focus.i===i&&i>0;
+    h+=`<rect class="hdr-bg ${hl?"hl":""}" x="${OX+3}" y="${OY+(i+1)*S+3}" width="${S-6}" height="${S-6}" rx="8"/>`;
+    h+=`<text class="hdr ${i===0?"dash":""}" x="${OX+S/2-5}" y="${cy(i)}">${c}</text><text class="idx" x="${OX+S-9}" y="${cy(i)+4}">${i}</text>`;
+  });
+  let pathCells=new Set(), pathUpTo=-1;
+  if(st.t==="tb"||st.t==="tbEnd")pathUpTo=st.k;
+  if(st.t==="final")pathUpTo=path.length-2;
+  for(let q=0;q<=pathUpTo;q++){ if(path[q].dir)pathCells.add(key(path[q].i,path[q].j)); }
+  const nb={};
+  if(st.t==="cell"){nb[key(st.i-1,st.j-1)]="d";nb[key(st.i-1,st.j)]="u";nb[key(st.i,st.j-1)]="l";}
+  const showHeat = k>=fillAt[key(m,n)]; // matris tamamlanınca tepeleri göster
+  for(let i=0;i<=m;i++)for(let j=0;j<=n;j++){
+    const fa=fillAt[key(i,j)], filled=fa<=k, isNew=fa===k, v=H[i][j];
+    let cls="c-bg"+(filled?" filled":"");
+    if(pathCells.has(key(i,j)))cls+=" path";
+    if(nb[key(i,j)])cls+=" nb-"+nb[key(i,j)];
+    if(focus&&focus.i===i&&focus.j===j)cls+=" cur";
+    const x=OX+(j+1)*S,y=OY+(i+1)*S;
+    h+=`<rect class="${cls}" x="${x+2}" y="${y+2}" width="${S-4}" height="${S-4}" rx="7"/>`;
+    if(filled&&showHeat&&v>0&&!pathCells.has(key(i,j))) h+=`<rect class="heat ap" style="--dl:.1s" x="${x+2}" y="${y+2}" width="${S-4}" height="${S-4}" rx="7" fill-opacity="${(v/MAXV*0.32).toFixed(3)}"/>`;
+    if(filled){
+      let dl=0;
+      if(isNew){ if(st.t==="init")dl=.3+(i+j)*.12; else if(st.t==="cell")dl=2.4; }
+      h+=`<g class="${isNew?"pop":""}" style="--dl:${dl}s"><text class="val ${v===0?"zero":""}" x="${cx(j)}" y="${cy(i)+3}">${fmt(v)}</text>`;
+      D[i][j].forEach((d,q)=>{ const g=d==="d"?"↖":d==="u"?"↑":"←"; h+=`<text class="gl ${d}" x="${x+6+q*10}" y="${y+15}">${g}</text>`; });
+      h+=`</g>`;
+    } else h+=`<text class="val dot" x="${cx(j)}" y="${cy(i)}">·</text>`;
+  }
+  if(pathUpTo>=0){
+    let pts=[]; for(let q=0;q<=Math.min(pathUpTo,path.length-2);q++)pts.push(cx(path[q].j)+","+cy(path[q].i));
+    if(st.t==="tb"&&path[st.k+1]&&path[st.k+1].dir){ const nx=path[st.k+1]; pts.push(cx(nx.j)+","+cy(nx.i)); }
+    if(pts.length>1) h+=`<polyline class="pathline" points="${pts.join(" ")}"/>`;
+  }
+  // şimdiye kadarki en büyük
+  const rm=runMax[k];
+  if(rm.v>0 && st.ph<=2){
+    const x=OX+(rm.j+1)*S,y=OY+(rm.i+1)*S, dl=rm.newAt&&st.t==="cell"?2.6:0;
+    h+=`<g class="ap" style="--dl:${dl}s"><rect class="maxring" x="${x-1}" y="${y-1}" width="${S+2}" height="${S+2}" rx="9"/><text class="maxtag" x="${x+S-9}" y="${y+14}">★</text></g>`;
+  }
+  if(st.t==="cell"||st.t==="tb"){
+    const c=C[st.i][st.j];
+    const win= st.t==="cell" ? D[st.i][st.j] : [path[st.k].dir];
+    const lbl={d:c.s>0?"+3":"−3",u:"−2",l:"−2"};
+    const dls={d:.5,u:.9,l:1.3};
+    ["d","u","l"].forEach(d=>{ h+=arrowSVG(d,st.i,st.j,dls[d],win.includes(d)?false:1.9,lbl[d]); });
+  }
+  if(st.t==="max"||st.t==="final"){ h+=`<rect class="ring ap" style="--dl:.2s" x="${OX+(MJ+1)*S-1}" y="${OY+(MI+1)*S-1}" width="${S+2}" height="${S+2}" rx="9"/>`; }
+  svg.innerHTML=h;
+}
+
+// --- Panel ---
+const panel=document.getElementById("panel");
+const nameOf={d:"çapraz",u:"yukarıdan",l:"soldan"};
+function candRows(i,j,winners,mode){
+  const c=C[i][j], xi=X[i-1], yj=Y[j-1];
+  const rows=[
+    {d:"z",ic:"0",nm:"Sıfır",ex:`0`,hint:`burada yeniden başla`,v:0},
+    {d:"d",ic:"↖",nm:"Çapraz",ex:`H(${i-1},${j-1}) ${sgn(c.s)} = ${fmt(H[i-1][j-1])} ${sgn(c.s)}`,hint:`${xi} ile ${yj} alt alta (${xi===yj?"eşleşme":"uyumsuzluk"})`,v:c.d},
+    {d:"u",ic:"↑",nm:"Yukarı",ex:`H(${i-1},${j}) − 2 = ${fmt(H[i-1][j])} − 2`,hint:`${xi} karşısına boşluk`,v:c.u},
+    {d:"l",ic:"←",nm:"Sol",ex:`H(${i},${j-1}) − 2 = ${fmt(H[i][j-1])} − 2`,hint:`${yj} karşısına boşluk`,v:c.l},
+  ];
+  const dl=[.2,.5,.9,1.3];
+  return `<div class="cands">`+rows.map((r,q)=>`<div class="cand ${r.d} ${winners.includes(r.d)?"win":"lose"}" style="--dl:${dl[q]}s;--wd:1.9s"><span class="ic">${r.ic}</span><span class="nm">${r.nm}</span><span class="ex">${r.ex}<small>${r.hint}</small></span><span class="vv">${fmt(r.v)}${mode==="tb"&&winners.includes(r.d)?" ✓":""}</span></div>`).join("")+`</div>`;
+}
+const xSpan=(a,b)=>X.split("").map((ch,q)=>`<span class="${q>=a&&q<b?"ex-in":"ex-out"}">${ch}</span>`).join(" ");
+function renderPanel(k){
+  const st=steps[k]; let h="";
+  if(st.t==="intro"){
+    h=`<p class="eyebrow">Problem</p><h2>İki dizide en benzer <i>parçayı</i> bulmak</h2>
+    <p>Needleman–Wunsch dizilerin tamamını hizalıyordu. Smith–Waterman ise yalnızca en iyi eşleşen alt bölgeyi arar. Aynı tablo yöntemi, üç küçük değişiklikle:</p>
+    <div class="cands" style="margin-top:10px">
+      <div class="cand z" style="--dl:.3s"><span class="ic">0</span><span class="nm">Sıfır</span><span class="ex">max'a 0 eklenir: değer asla negatif olmaz<small>kötü bir başlangıç iyi bölgeyi aşağı çekemez</small></span><span></span></div>
+      <div class="cand" style="--dl:.6s"><span class="ic">★</span><span class="nm">Başlangıç</span><span class="ex">Geri izleme sağ alt köşeden değil, en büyük hücreden başlar</span><span></span></div>
+      <div class="cand" style="--dl:.9s"><span class="ic">■</span><span class="nm">Bitiş</span><span class="ex">0 değerli bir hücreye gelince durulur</span><span></span></div>
+    </div>
+    <div class="scoring"><div><b style="color:var(--diag)">+3</b><span>Eşleşme</span></div><div><b style="color:var(--up)">−3</b><span>Uyumsuzluk</span></div><div><b style="color:var(--left)">−2</b><span>Boşluk (–)</span></div></div>`;
+  } else if(st.t==="init"){
+    h=`<p class="eyebrow">Başlangıç</p><h2>İlk satır ve ilk sütun: hepsi <span class="mono">0</span></h2>
+    <p>NW'de burası −2, −4, −6 … diye azalıyordu. Yerel hizalamada dizinin başındaki harfleri atlamak <b>ücretsizdir</b>; hizalama herhangi bir yerden başlayabilir.</p>
+    <p class="mono later" style="--dl:1.2s">H(i, 0) = H(0, j) = 0</p>
+    <p class="note" style="--dl:1.8s">Matris (8+1) × (9+1) = 90 hücre. Önemli hücreler yavaş, diğerleri hızlı doldurulacak.</p>`;
+  } else if(st.t==="cell"){
+    const {i,j}=st, xi=X[i-1], yj=Y[j-1], c=C[i][j], w=D[i][j], v=H[i][j];
+    const rm=runMax[k];
+    const why = v===0 ? "üç aday da 0'dan küçük → <b>0</b> (yeni başlangıç noktası)" : `${w.map(d=>nameOf[d]).join(" ve ")}${w.length>1?" (eşitlik)":""}`;
+    h=`<p class="eyebrow">Hücre ${st.no} / 72 · satır ${xi}, sütun ${yj}${st.slow?"":" · hızlı"}</p>
+    <h2><span class="mono">H(${i},${j})</span> · <span class="pair">${xi} / ${yj}</span> → ${xi===yj?"eşleşme, s = +3":"uyumsuzluk, s = −3"}</h2>
+    ${candRows(i,j,v===0?["z"]:w,"cell")}
+    <div class="verdict" style="--dl:2.2s">H(${i},${j}) = max(0, ${fmt(c.d)}, ${fmt(c.u)}, ${fmt(c.l)}) = <b>${fmt(v)}</b> · ${why}</div>
+    <p class="note" style="--dl:2.6s">${rm.newAt?`<b style="color:var(--accent)">Yeni en büyük değer!</b> `:""}★ Şimdiye kadarki en büyük: H(${rm.i},${rm.j}) = ${rm.v}</p>`;
+  } else if(st.t==="max"){
+    h=`<p class="eyebrow">En büyük hücre</p><h2>Yerel skor: <span class="mono">H(6,7) = 13</span></h2>
+    <p>NW'de skor her zaman sağ alt köşedeydi. Burada <b>tüm matristeki en büyük değeri</b> arıyoruz. Bu örnekte sağ alt köşe 7, en büyük değer ise 13: (6,7) hücresi, C / C eşleşmesi.</p>
+    <p class="later" style="--dl:.8s">Renk koyulaştıkça değer büyür: matristeki “tepeler” benzer bölgeleri gösterir. 11 gibi ikinci tepeler başka yerel hizalama adayları olabilir.</p>
+    <p class="note" style="--dl:1.4s">Geri izleme buradan başlayacak ve 0'a ulaşınca duracak.</p>`;
+  } else if(st.t==="tb"){
+    const {i,j,k:q}=st, p=path[q], col=cols[q];
+    h=`<p class="eyebrow">Geri izleme · adım ${q+1}</p>
+    <h2><span class="mono">H(${i},${j}) = ${fmt(H[i][j])}</span> değerini hangi komşu üretti?</h2>
+    ${candRows(i,j,[p.dir],"tb")}
+    <div class="verdict" style="--dl:2.2s">${p.dir==="d"?"Çapraz → iki harf alt alta":p.dir==="u"?"Yukarı → x harfi, karşısında boşluk":"Sol → y harfi, karşısında boşluk"}: sütun <b>${col.a} / ${col.b}</b></div>`;
+  } else if(st.t==="tbEnd"){
+    h=`<p class="eyebrow">Geri izleme · son</p><h2><span class="mono">H(${endCell.i},${endCell.j}) = 0</span> → dur</h2>
+    <p>Bir sonraki hücrenin değeri 0. Bu, hizalamanın burada başladığı anlamına gelir; (${endCell.i},${endCell.j}) hücresi hizalamaya <b>girmez</b>.</p>
+    <p class="later" style="--dl:.8s">Yol: 13 → 10 → 7 → 9 → 6 → 3 → <b>0</b>. NW'deki gibi (0,0)'a kadar gitmek gerekmez.</p>`;
+  } else if(st.t==="final"){
+    h=`<p class="eyebrow">Sonuç</p><h2>Optimal yerel hizalama</h2>
+    <pre class="mono later" style="--dl:.2s;font-size:24px;line-height:1.35;margin:10px 0;font-weight:600">x: G T T - A C
+   | | |   | |
+y: G T T G A C</pre>
+    <div class="verdict" style="--dl:.8s">Kontrol: 5 eşleşme × (+3) + 1 boşluk × (−2) = <b>13</b> = H(6,7) ✓</div>
+    <p class="later mono" style="--dl:1.3s;font-size:16px;line-height:1.7">x: ${xSpan(1,6)}<br>y: ${Y.split("").map((ch,q)=>`<span class="${q>=1&&q<7?"ex-in":"ex-out"}">${ch}</span>`).join(" ")}</p>
+    <p class="later" style="--dl:1.8s">Uçlardaki uyumsuz harfler (x'in ilk T'si ve son GG'si, y'nin ilk G'si ve son TA'sı) hizalamanın dışında kaldı. Aynı diziler aynı puanlarla <b>global</b> (NW) hizalanınca skor yalnızca <b>4</b> olur.</p>`;
+  }
+  panel.innerHTML=h;
+}
+
+// --- Hizalama şeridi ---
+const aln=document.getElementById("aln");
+document.querySelector(".aln").style.setProperty("--n",L);
+function renderAln(k){
+  const st=steps[k];
+  let have=0, isNewIdx=-1, done=false;
+  if(st.t==="tb"){have=st.k+1;isNewIdx=st.k;}
+  else if(st.t==="tbEnd"||st.t==="final"){have=L;done=true;}
+  let top="",bars="",bot="",sc="";
+  for(let s=0;s<L;s++){
+    const q=L-1-s, c=cols[q], show=q<have;
+    const cl=show?(q===isNewIdx||st.t==="final"?"fill":"old"):"";
+    const dl=(st.t==="tb"&&q===isNewIdx)?2.2:(st.t==="final"?.1+s*.12:0);
+    top+=`<div class="slot ${cl} ${show&&c.a==="-"?"gap":""}" style="--dl:${dl}s">${show?(c.a==="-"?"–":c.a):""}</div>`;
+    bars+=`<div class="bar">${show&&c.a===c.b?"|":""}</div>`;
+    bot+=`<div class="slot ${cl} ${show&&c.b==="-"?"gap":""}" style="--dl:${dl}s">${show?(c.b==="-"?"–":c.b):""}</div>`;
+    const v=c.a==="-"||c.b==="-"?GAP:(c.a===c.b?MATCH:MIS);
+    sc+=`<div class="sc ${v>0?"pos":"neg"}">${show&&done?(v>0?"+"+v:fmt(v)):""}</div>`;
+  }
+  const msg = k<tbStart?`<p class="note" style="margin:6px 0 0">Geri izleme başlayınca hizalama sütunları burada belirecek.</p>`:"";
+  aln.innerHTML=`<div class="lbl" style="font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Yerel hizalama ${have&&!done?"(sondan başa kuruluyor)":""}</div>
+  <div class="aln-grid"><span class="h">x</span>${top}<span class="h"></span>${bars}<span class="h">y</span>${bot}<span class="h"></span>${sc}</div>${msg}`;
+}
+
+// --- Oynatıcı ---
+let cur=0, playing=false, timer=null, speed=1;
+const slider=document.getElementById("slider"), cnt=document.getElementById("cnt"), bPlay=document.getElementById("bPlay");
+slider.max=N-1;
+function setK(){ document.documentElement.style.setProperty("--k",String((steps[cur].f||1)/speed)); }
+function show(k){
+  cur=Math.max(0,Math.min(N-1,k)); setK();
+  renderSVG(cur); renderPanel(cur); renderAln(cur);
+  slider.value=cur; cnt.textContent=`Adım ${cur+1} / ${N}`;
+  const ph=steps[cur].ph;
+  document.querySelectorAll("#phases li").forEach(li=>{const p=+li.dataset.p; li.classList.toggle("on",p===ph); li.classList.toggle("past",p<ph);});
+  schedule();
+}
+function schedule(){
+  clearTimeout(timer);
+  if(!playing)return;
+  if(cur>=N-1){ playing=false; updPlay(); return; }
+  timer=setTimeout(()=>show(cur+1), steps[cur].dur*1000/speed);
+}
+function updPlay(){ bPlay.textContent=playing?"❚❚ Duraklat":(cur>=N-1?"↺ Baştan":"▶ Oynat"); }
+function toggle(){ if(!playing&&cur>=N-1){ playing=true; updPlay(); show(0); return; } playing=!playing; updPlay(); schedule(); }
+bPlay.onclick=toggle;
+document.getElementById("bNext").onclick=()=>show(cur+1);
+document.getElementById("bPrev").onclick=()=>show(cur-1);
+document.getElementById("bStart").onclick=()=>show(0);
+slider.oninput=()=>show(+slider.value);
+document.querySelectorAll(".speed button").forEach(b=>b.onclick=()=>{
+  speed=+b.dataset.s; setK();
+  document.querySelectorAll(".speed button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  schedule();
+});
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"&&e.target.type!=="range")return;
+  if(e.code==="Space"){e.preventDefault();toggle();}
+  else if(e.key==="ArrowRight"){e.preventDefault();show(cur+1);}
+  else if(e.key==="ArrowLeft"){e.preventDefault();show(cur-1);}
+});
+const mh=/^#adim-(\d+)$/.exec(location.hash||"");
+const startAt=mh?Math.min(N-1,Math.max(0,+mh[1]-1)):0;
+const reduce=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+playing=!mh&&!reduce; updPlay(); show(startAt);
+window.__nw={show,steps,N,H,path,cols,MI,MJ};
+})();
+</script>
+
+</body></html>
